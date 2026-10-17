@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Launcher</title>
+<style>
+:root{--bg:#f6f6f3;--card:#fff;--text:#1c1c1a;--muted:#6b6b66;--line:#e2e2dc;--accent:#4f46e5;--ok:#15803d;--err:#b91c1c}
+@media (prefers-color-scheme:dark){:root{--bg:#141414;--card:#1e1e1e;--text:#eee;--muted:#999;--line:#333;--accent:#818cf8;--ok:#4ade80;--err:#f87171}}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--text)}
+header{padding:24px 20px 8px;max-width:960px;margin:auto}
+h1{margin:0 0 12px;font-size:26px}
+.bar{display:flex;gap:8px;flex-wrap:wrap}
+input{padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text);font-size:14px}
+#repo{flex:1;min-width:200px}#branch{width:100px}
+button{padding:9px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-size:14px;cursor:pointer}
+button.sec{background:transparent;color:var(--text);border:1px solid var(--line)}
+button:disabled{opacity:.5;cursor:wait}
+main{max-width:960px;margin:auto;padding:12px 20px 40px}
+#status{color:var(--muted);font-size:14px;margin:8px 0 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.card h3{margin:0;font-size:19px}
+.card small{color:var(--muted);word-break:break-all}
+.actions{display:flex;gap:8px;margin-top:10px}
+.link{font-size:13px;color:var(--ok);word-break:break-all}.err{color:var(--err)}
+#viewer{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;z-index:10}
+#viewer.open{display:flex}
+#vbar{display:flex;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--card)}
+#vbar b{flex:1}#frame{flex:1;border:0;background:#fff;width:100%}
+</style>
+</head>
+<body>
+<header>
+  <h1>🚀 Launcher</h1>
+  <div class="bar">
+    <input id="repo" value="Andrei692464/launcher" placeholder="utilizator/repo">
+    <input id="branch" value="main" placeholder="branch">
+    <button id="load">Încarcă</button>
+  </div>
+</header>
+<main>
+  <div id="status"></div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<div id="viewer">
+  <div id="vbar">
+    <button class="sec" id="back">← Înapoi</button>
+    <b id="vtitle"></b>
+    <span id="vmsg" class="link"></span>
+    <button id="vpub">Publish pe Vercel</button>
+  </div>
+  <iframe id="frame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"></iframe>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const cache = {};
+let current = null;
+
+async function load() {
+  const repo = $('repo').value.trim(), branch = $('branch').value.trim() || 'main';
+  $('grid').innerHTML = ''; $('status').textContent = 'Se încarcă...';
+  try {
+    const r = await fetch(`https://api.github.com/repos/${repo}/git/trees/${branch}?recursive=1`);
+    if (!r.ok) throw new Error(r.status === 404 ? 'Repo sau branch negăsit (repo-ul trebuie să fie public).' : 'Eroare GitHub ' + r.status);
+    const data = await r.json();
+    const files = data.tree.filter(f => f.type === 'blob' && /\.html?$/i.test(f.path) && f.path.toLowerCase() !== 'index.html');
+    if (!files.length) { $('status').textContent = 'Nu am găsit fișiere .html în repo.'; return; }
+    $('status').textContent = `${files.length} aplicați${files.length === 1 ? 'e' : 'i'} găsit${files.length === 1 ? 'ă' : 'e'}.`;
+    files.forEach(f => {
+      const name = f.path.split('/').pop().replace(/\.html?$/i, '');
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `<h3></h3><small></small><div class="link"></div><div class="actions"><button>Launch</button><button class="sec">Publish</button></div>`;
+      card.querySelector('h3').textContent = name;
+      card.querySelector('small').textContent = f.path;
+      const [launch, pub] = card.querySelectorAll('button');
+      const msg = card.querySelector('.link');
+      launch.onclick = () => openApp(repo, branch, f.path, name);
+      pub.onclick = () => publish(repo, branch, f.path, name, pub, msg);
+      $('grid').appendChild(card);
+    });
+  } catch (e) { $('status').innerHTML = '<span class="err">' + e.message + '</span>'; }
+}
+
+async function getHtml(repo, branch, path) {
+  const key = repo + branch + path;
+  if (cache[key]) return cache[key];
+  const url = `https://raw.githubusercontent.com/${repo}/${branch}/${path.split('/').map(encodeURIComponent).join('/')}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('Nu pot citi fișierul (' + r.status + ')');
+  return cache[key] = await r.text();
+}
+
+async function openApp(repo, branch, path, name) {
+  try {
+    const html = await getHtml(repo, branch, path);
+    current = { repo, branch, path, name };
+    $('vtitle').textContent = name; $('vmsg').textContent = '';
+    $('frame').srcdoc = html;
+    $('viewer').classList.add('open');
+  } catch (e) { $('status').innerHTML = '<span class="err">' + e.message + '</span>'; }
+}
+
+async function publish(repo, branch, path, name, btn, msgEl) {
+  btn && (btn.disabled = true);
+  msgEl.className = 'link'; msgEl.textContent = 'Se publică...';
+  try {
+    const html = await getHtml(repo, branch, path);
+    const r = await fetch('/api/publish', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, html })
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'Publicarea a eșuat');
+    msgEl.innerHTML = `✅ <a href="${j.url}" target="_blank" rel="noopener">${j.url}</a>`;
+  } catch (e) { msgEl.className = 'link err'; msgEl.textContent = e.message; }
+  btn && (btn.disabled = false);
+}
+
+$('load').onclick = load;
+$('back').onclick = () => { $('viewer').classList.remove('open'); $('frame').srcdoc = ''; };
+$('vpub').onclick = () => current && publish(current.repo, current.branch, current.path, current.name, $('vpub'), $('vmsg'));
+load();
+</script>
+</body>
+</html>
