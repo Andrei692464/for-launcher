@@ -66,13 +66,11 @@ async function load() {
       const name = f.path.split('/').pop().replace(/\.html?$/i, '');
       const card = document.createElement('div');
       card.className = 'card';
-      card.innerHTML = `<h3></h3><small></small><div class="link"></div><div class="actions"><button>Launch</button><button class="sec">Publish</button></div>`;
+      card.innerHTML = `<h3></h3><small></small><div class="actions"><button>Launch</button></div>`;
       card.querySelector('h3').textContent = name;
       card.querySelector('small').textContent = f.path;
-      const [launch, pub] = card.querySelectorAll('button');
-      const msg = card.querySelector('.link');
+      const launch = card.querySelector('button');
       launch.onclick = () => openApp(repo, branch, f.path, name);
-      pub.onclick = () => publish(repo, branch, f.path, name, pub, msg);
       $('grid').appendChild(card);
     });
   } catch (e) { $('status').innerHTML = '<span class="err">' + e.message + '</span>'; }
