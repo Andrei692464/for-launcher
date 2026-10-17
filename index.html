@@ -17,7 +17,7 @@ input{padding:9px 12px;border:1px solid var(--line);border-radius:8px;background
 button{padding:9px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-size:14px;cursor:pointer}
 button.sec{background:transparent;color:var(--text);border:1px solid var(--line)}
 button:disabled{opacity:.5;cursor:wait}
-main{max-width:960px;margin:auto;padding:12px 20px 40px}
+main{max-width:960px;margin:auto;padding:28px 20px 40px}
 #status{color:var(--muted);font-size:14px;margin:8px 0 16px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px}
@@ -32,14 +32,6 @@ main{max-width:960px;margin:auto;padding:12px 20px 40px}
 </style>
 </head>
 <body>
-<header>
-  <h1>🚀 Launcher</h1>
-  <div class="bar">
-    <input id="repo" value="Andrei692464/launcher" placeholder="utilizator/repo">
-    <input id="branch" value="main" placeholder="branch">
-    <button id="load">Încarcă</button>
-  </div>
-</header>
 <main>
   <div id="status"></div>
   <div class="grid" id="grid"></div>
@@ -50,18 +42,18 @@ main{max-width:960px;margin:auto;padding:12px 20px 40px}
     <button class="sec" id="back">← Înapoi</button>
     <b id="vtitle"></b>
     <span id="vmsg" class="link"></span>
-    <button id="vpub">Publish pe Vercel</button>
   </div>
   <iframe id="frame" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"></iframe>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
+const REPO = 'Andrei692464/launcher', BRANCH = 'main';
 const cache = {};
 let current = null;
 
 async function load() {
-  const repo = $('repo').value.trim(), branch = $('branch').value.trim() || 'main';
+  const repo = REPO, branch = BRANCH;
   $('grid').innerHTML = ''; $('status').textContent = 'Se încarcă...';
   try {
     const r = await fetch(`https://api.github.com/repos/${repo}/git/trees/${branch}?recursive=1`);
@@ -121,9 +113,7 @@ async function publish(repo, branch, path, name, btn, msgEl) {
   btn && (btn.disabled = false);
 }
 
-$('load').onclick = load;
 $('back').onclick = () => { $('viewer').classList.remove('open'); $('frame').srcdoc = ''; };
-$('vpub').onclick = () => current && publish(current.repo, current.branch, current.path, current.name, $('vpub'), $('vmsg'));
 load();
 </script>
 </body>
