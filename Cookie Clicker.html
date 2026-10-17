@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cookie Clicker - Bunicu</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, #2c1810 0%, #1a0f0a 50%, #3d2314 100%);
+    color: #f5e6c8;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Top bar - stânga la Y:0 */
+  #top-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 48px;
+    background: rgba(0,0,0,0.75);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    z-index: 100;
+    border-bottom: 2px solid #8B4513;
+    gap: 20px;
+  }
+  #top-bar .stat {
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  #top-bar .stat span { color: #ffd700; font-weight: bold; }
+  #user-info {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+  }
+  #user-info button {
+    background: #8B4513;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  #user-info button:hover { background: #a0522d; }
+
+  /* Layout principal */
+  .main {
+    display: flex;
+    padding-top: 48px;
+    min-height: 100vh;
+  }
+
+  /* Zona cookie - stânga/centru */
+  .cookie-zone {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    position: relative;
+  }
+
+  #cps-display {
+    font-size: 22px;
+    color: #ffd700;
+    margin-bottom: 12px;
+    text-shadow: 0 0 10px rgba(255,215,0,0.4);
+    min-height: 32px;
+  }
+
+  #cookie-count {
+    font-size: 42px;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 20px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  }
+
+  #big-cookie {
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #f4a460, #cd853f 40%, #8B4513 80%);
+    border: 8px solid #5c3317;
+    box-shadow: 
+      inset 0 0 30px rgba(0,0,0,0.3),
+      0 10px 40px rgba(0,0,0,0.5),
+      0 0 0 4px #3d2314;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 90px;
+    user-select: none;
+    transition: transform 0.08s;
+    position: relative;
+  }
+  #big-cookie:active { transform: scale(0.92); }
+  #big-cookie::before {
+    content: '';
+    position: absolute;
+    width: 18px; height: 18px;
+    background: #5c3317;
+    border-radius: 50%;
+    top: 30%; left: 25%;
+  }
+  #big-cookie::after {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    background: #5c3317;
+    border-radius: 50%;
+    top: 55%; left: 60%;
+  }
+
+  /* Zona clădiri - mijloc/dreapta */
+  .buildings-zone {
+    width: 380px;
+    background: rgba(0,0,0,0.55);
+    border-left: 3px solid #8B4513;
+    padding: 20px 16px;
+    overflow-y: auto;
+    max-height: calc(100vh - 48px);
+  }
+  .buildings-zone h2 {
+    text-align: center;
+    margin-bottom: 16px;
+    color: #ffd700;
+    font-size: 20px;
+    border-bottom: 1px solid #8B4513;
+    padding-bottom: 8px;
+  }
+
+  .building {
+    background: linear-gradient(90deg, #3d2314, #2c1810);
+    border: 2px solid #8B4513;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .building:hover:not(.disabled) {
+    background: linear-gradient(90deg, #5c3317, #3d2314);
+    border-color: #ffd700;
+    transform: translateX(-4px);
+  }
+  .building.disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .building .info { flex: 1; }
+  .building .name { font-weight: bold; font-size: 16px; color: #ffd700; }
+  .building .desc { font-size: 12px; color: #c9a86c; margin-top: 2px; }
+  .building .owned {
+    font-size: 28px;
+    font-weight: bold;
+    color: #fff;
+    min-width: 50px;
+    text-align: right;
+  }
+  .building .price {
+    font-size: 13px;
+    color: #90ee90;
+    margin-top: 4px;
+  }
+
+  /* Admin panel */
+  #admin-panel {
+    display: none;
+    background: rgba(120,0,0,0.3);
+    border: 2px solid #c00;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  #admin-panel h3 { color: #ff6b6b; margin-bottom: 8px; font-size: 15px; }
+  #admin-panel button {
+    background: #c00;
+    color: #fff;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 5px;
+    margin: 3px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  #admin-panel button:hover { background: #e00; }
+
+  /* Modal autentificare */
+  #auth-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  #auth-modal.show { display: flex; }
+  .auth-box {
+    background: #2c1810;
+    border: 3px solid #8B4513;
+    border-radius: 14px;
+    padding: 28px;
+    width: 340px;
+    max-width: 95vw;
+  }
+  .auth-box h2 {
+    text-align: center;
+    color: #ffd700;
+    margin-bottom: 18px;
+  }
+  .auth-box input {
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border: 2px solid #8B4513;
+    border-radius: 8px;
+    background: #1a0f0a;
+    color: #f5e6c8;
+    font-size: 15px;
+  }
+  .auth-box input:focus { outline: none; border-color: #ffd700; }
+  .auth-box .btns {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .auth-box button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  .btn-login { background: #8B4513; color: #fff; }
+  .btn-login:hover { background: #a0522d; }
+  .btn-register { background: #2e7d32; color: #fff; }
+  .btn-register:hover { background: #388e3c; }
+  .btn-guest { background: #555; color: #fff; margin-top: 10px; width: 100%; }
+  .btn-guest:hover { background: #666; }
+  #auth-msg {
+    text-align: center;
+    font-size: 13px;
+    min-height: 20px;
+    margin-bottom: 8px;
+    color: #ff6b6b;
+  }
+
+  /* Floating +1 */
+  .float-plus {
+    position: absolute;
+    color: #ffd700;
+    font-weight: bold;
+    font-size: 22px;
+    pointer-events: none;
+    animation: floatUp 0.8s ease-out forwards;
+  }
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-60px); }
+  }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .main { flex-direction: column; }
+    .buildings-zone {
+      width: 100%;
+      max-height: none;
+      border-left: none;
+      border-top: 3px solid #8B4513;
+    }
+    #big-cookie { width: 180px; height: 180px; font-size: 70px; }
+    #cookie-count { font-size: 32px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Top bar la Y:0 stânga -->
+<div id="top-bar">
+  <div class="stat">🍪 Cookies: <span id="top-cookies">0</span></div>
+  <div class="stat">⚡ CPS: <span id="top-cps">0</span></div>
+  <div id="user-info">
+    <span id="logged-user">Vizitator</span>
+    <button id="btn-auth" onclick="showAuth()">Cont</button>
+    <button id="btn-logout" style="display:none" onclick="logout()">Deconectare</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Zona cookie -->
+  <div class="cookie-zone">
+    <div id="cps-display">0 cookies / secundă</div>
+    <div id="cookie-count">0</div>
+    <div id="big-cookie" onclick="clickCookie(event)">🍪</div>
+  </div>
+
+  <!-- Clădiri pe mijloc/dreapta -->
+  <div class="buildings-zone">
+    <h2>Clădiri</h2>
+
+    <!-- Admin panel (doar pentru Andrei) -->
+    <div id="admin-panel">
+      <h3>🔧 Panou Admin</h3>
+      <button onclick="adminAdd(1000)">+1.000 cookies</button>
+      <button onclick="adminAdd(100000)">+100.000 cookies</button>
+      <button onclick="adminAdd(1000000)">+1.000.000 cookies</button>
+      <button onclick="adminReset()">Reset progres</button>
+    </div>
+
+    <div id="buildings-list"></div>
+  </div>
+</div>
+
+<!-- Modal autentificare -->
+<div id="auth-modal">
+  <div class="auth-box">
+    <h2>Cont Cookie Clicker</h2>
+    <div id="auth-msg"></div>
+    <input type="text" id="auth-user" placeholder="Nume utilizator" autocomplete="username">
+    <input type="password" id="auth-pass" placeholder="Parolă" autocomplete="current-password">
+    <div class="btns">
+      <button class="btn-login" onclick="login()">Autentificare</button>
+      <button class="btn-register" onclick="register()">Creează cont</button>
+    </div>
+    <button class="btn-guest" onclick="playAsGuest()">Joacă fără cont</button>
+  </div>
+</div>
+
+<script>
+// ========== DATE JOC ==========
+const BUILDINGS = [
+  { id: 'bunicu', name: 'Bunicu', desc: 'Un bunicu drăguț care coace cookies', baseCost: 100, baseCps: 1, icon: '👴' },
+  { id: 'ferma', name: 'Fermă', desc: 'Cultivă plante de cookie', baseCost: 1100, baseCps: 8, icon: '🌾' },
+  { id: 'mina', name: 'Mină', desc: 'Extrage aluat din pământ', baseCost: 12000, baseCps: 47, icon: '⛏️' },
+  { id: 'fabrica', name: 'Fabrică', desc: 'Produce cookies industrial', baseCost: 130000, baseCps: 260, icon: '🏭' },
+  { id: 'banca', name: 'Bancă', desc: 'Generează dobândă în cookies', baseCost: 1400000, baseCps: 1400, icon: '🏦' },
+  { id: 'templu', name: 'Templu', desc: 'Se roagă pentru cookies sacre', baseCost: 20000000, baseCps: 7800, icon: '🛕' },
+];
+
+let state = {
+  cookies: 0,
+  cps: 0,
+  buildings: {},
+  username: null,
+  isAdmin: false
+};
+
+// Inițializare clădiri
+BUILDINGS.forEach(b => { state.buildings[b.id] = 0; });
+
+// ========== UTILITARE ==========
+function formatNum(n) {
+  n = Math.floor(n);
+  if (n < 1000) return n.toString();
+  if (n < 1e6) return (n / 1e3).toFixed(1) + 'K';
+  if (n < 1e9) return (n / 1e6).toFixed(1) + 'M';
+  if (n < 1e12) return (n / 1e9).toFixed(1) + 'B';
+  return (n / 1e12).toFixed(1) + 'T';
+}
+
+function getCost(building) {
+  const owned = state.buildings[building.id] || 0;
+  return Math.ceil(building.baseCost * Math.pow(1.15, owned));
+}
+
+function recalcCps() {
+  let total = 0;
+  BUILDINGS.forEach(b => {
+    total += (state.buildings[b.id] || 0) * b.baseCps;
+  });
+  state.cps = total;
+}
+
+// ========== UI ==========
+function updateUI() {
+  // Forțăm cookies să fie număr întreg pentru afișare și comparații
+  const cookiesInt = Math.floor(state.cookies);
+  document.getElementById('cookie-count').textContent = formatNum(cookiesInt);
+  document.getElementById('top-cookies').textContent = formatNum(cookiesInt);
+  document.getElementById('top-cps').textContent = formatNum(state.cps);
+  document.getElementById('cps-display').textContent = formatNum(state.cps) + ' cookies / secundă';
+
+  // Clădiri
+  const list = document.getElementById('buildings-list');
+  list.innerHTML = '';
+  BUILDINGS.forEach(b => {
+    const owned = state.buildings[b.id] || 0;
+    const cost = getCost(b);
+    // Comparăm cu valoarea întreagă – nu mai cere „exact” atâția cookies
+    const canBuy = cookiesInt >= cost;
+    const div = document.createElement('div');
+    div.className = 'building' + (canBuy ? '' : ' disabled');
+    div.innerHTML = `
+      <div class="info">
+        <div class="name">${b.icon} ${b.name}</div>
+        <div class="desc">${b.desc} • +${b.baseCps} CPS</div>
+        <div class="price">Cost: ${formatNum(cost)} cookies</div>
+      </div>
+      <div class="owned">${owned}</div>
+    `;
+    if (canBuy) {
+      div.onclick = () => buyBuilding(b.id);
+    }
+    list.appendChild(div);
+  });
+
+  // Admin
+  document.getElementById('admin-panel').style.display = state.isAdmin ? 'block' : 'none';
+
+  // User info
+  const userEl = document.getElementById('logged-user');
+  const btnAuth = document.getElementById('btn-auth');
+  const btnLogout = document.getElementById('btn-logout');
+  if (state.username) {
+    userEl.textContent = state.isAdmin ? `👑 ${state.username} (Admin)` : `👤 ${state.username}`;
+    btnAuth.style.display = 'none';
+    btnLogout.style.display = 'inline-block';
+  } else {
+    userEl.textContent = 'Vizitator';
+    btnAuth.style.display = 'inline-block';
+    btnLogout.style.display = 'none';
+  }
+}
+
+// ========== JOC ==========
+function clickCookie(e) {
+  state.cookies = Math.floor(state.cookies) + 1;
+  // Floating +1
+  const plus = document.createElement('div');
+  plus.className = 'float-plus';
+  plus.textContent = '+1';
+  plus.style.left = (e.clientX - 20) + 'px';
+  plus.style.top = (e.clientY - 30) + 'px';
+  document.body.appendChild(plus);
+  setTimeout(() => plus.remove(), 800);
+  updateUI();
+  saveProgress();
+}
+
+function buyBuilding(id) {
+  const b = BUILDINGS.find(x => x.id === id);
+  if (!b) return;
+  const cost = getCost(b);
+  const cookiesInt = Math.floor(state.cookies);
+  if (cookiesInt >= cost) {
+    state.cookies = cookiesInt - cost;          // rămânem pe număr întreg
+    state.buildings[id] = (state.buildings[id] || 0) + 1;
+    recalcCps();
+    updateUI();
+    saveProgress();
+  }
+}
+
+// ========== ADMIN ==========
+function adminAdd(amount) {
+  if (!state.isAdmin) return;
+  state.cookies = Math.floor(state.cookies) + amount;
+  updateUI();
+  saveProgress();
+}
+function adminReset() {
+  if (!state.isAdmin) return;
+  if (confirm('Sigur vrei să resetezi progresul?')) {
+    state.cookies = 0;
+    BUILDINGS.forEach(b => state.buildings[b.id] = 0);
+    recalcCps();
+    updateUI();
+    saveProgress();
+  }
+}
+
+// ========== CONTURI & LOCALSTORAGE ==========
+function getAccounts() {
+  try {
+    return JSON.parse(localStorage.getItem('cc_accounts') || '{}');
+  } catch { return {}; }
+}
+function saveAccounts(accs) {
+  localStorage.setItem('cc_accounts', JSON.stringify(accs));
+}
+
+function saveProgress() {
+  if (!state.username) return; // doar pentru conturi
+  const accs = getAccounts();
+  if (!accs[state.username]) return;
+  // Salvăm întotdeauna număr întreg de cookies + clădiri
+  const buildingsCopy = {};
+  BUILDINGS.forEach(b => {
+    buildingsCopy[b.id] = Math.floor(state.buildings[b.id] || 0);
+  });
+  accs[state.username].progress = {
+    cookies: Math.floor(state.cookies),
+    buildings: buildingsCopy
+  };
+  saveAccounts(accs);
+}
+
+function loadProgress(username) {
+  const accs = getAccounts();
+  const data = accs[username];
+  if (data && data.progress) {
+    state.cookies = Math.floor(data.progress.cookies || 0);
+    state.buildings = data.progress.buildings || {};
+    BUILDINGS.forEach(b => {
+      // Forțăm număr întreg pentru fiecare clădire
+      state.buildings[b.id] = Math.floor(state.buildings[b.id] || 0);
+    });
+  } else {
+    state.cookies = 0;
+    BUILDINGS.forEach(b => state.buildings[b.id] = 0);
+  }
+  recalcCps();
+}
+
+function showAuth() {
+  document.getElementById('auth-msg').textContent = '';
+  document.getElementById('auth-user').value = '';
+  document.getElementById('auth-pass').value = '';
+  document.getElementById('auth-modal').classList.add('show');
+}
+function hideAuth() {
+  document.getElementById('auth-modal').classList.remove('show');
+}
+
+function register() {
+  const user = document.getElementById('auth-user').value.trim();
+  const pass = document.getElementById('auth-pass').value;
+  const msg = document.getElementById('auth-msg');
+
+  if (!user || !pass) {
+    msg.textContent = 'Completează ambele câmpuri!';
+    return;
+  }
+  if (user.length < 3) {
+    msg.textContent = 'Numele trebuie să aibă minim 3 caractere.';
+    return;
+  }
+  if (pass.length < 4) {
+    msg.textContent = 'Parola trebuie să aibă minim 4 caractere.';
+    return;
+  }
+
+  const accs = getAccounts();
+  if (accs[user]) {
+    msg.textContent = 'Acest nume de utilizator există deja!';
+    return;
+  }
+
+  // Cont special Andrei nu poate fi creat de utilizatori
+  if (user.toLowerCase() === 'andrei') {
+    msg.textContent = 'Acest nume este rezervat!';
+    return;
+  }
+
+  accs[user] = {
+    password: pass,
+    progress: { cookies: 0, buildings: {} }
+  };
+  saveAccounts(accs);
+  msg.style.color = '#90ee90';
+  msg.textContent = 'Cont creat! Te poți autentifica acum.';
+  setTimeout(() => { msg.style.color = '#ff6b6b'; }, 2000);
+}
+
+function login() {
+  const user = document.getElementById('auth-user').value.trim();
+  const pass = document.getElementById('auth-pass').value;
+  const msg = document.getElementById('auth-msg');
+
+  if (!user || !pass) {
+    msg.textContent = 'Completează ambele câmpuri!';
+    return;
+  }
+
+  // Cont ADMIN special
+  if (user === 'Andrei' && pass === 'ANDREI123459') {
+    state.username = 'Andrei';
+    state.isAdmin = true;
+    // asigură că există în storage
+    const accs = getAccounts();
+    if (!accs['Andrei']) {
+      accs['Andrei'] = { password: 'ANDREI123459', progress: { cookies: 0, buildings: {} } };
+      saveAccounts(accs);
+    }
+    loadProgress('Andrei');
+    hideAuth();
+    updateUI();
+    return;
+  }
+
+  const accs = getAccounts();
+  if (!accs[user] || accs[user].password !== pass) {
+    msg.textContent = 'Nume sau parolă greșită!';
+    return;
+  }
+
+  state.username = user;
+  state.isAdmin = false;
+  loadProgress(user);
+  hideAuth();
+  updateUI();
+}
+
+function logout() {
+  saveProgress();
+  state.username = null;
+  state.isAdmin = false;
+  state.cookies = 0;
+  BUILDINGS.forEach(b => state.buildings[b.id] = 0);
+  recalcCps();
+  updateUI();
+}
+
+function playAsGuest() {
+  state.username = null;
+  state.isAdmin = false;
+  state.cookies = 0;
+  BUILDINGS.forEach(b => state.buildings[b.id] = 0);
+  recalcCps();
+  hideAuth();
+  updateUI();
+}
+
+// ========== LOOP CPS ==========
+// Adăugăm cookies la fiecare 100ms, dar păstrăm valoarea întreagă
+let lastTick = Date.now();
+setInterval(() => {
+  if (state.cps > 0) {
+    const now = Date.now();
+    const dt = (now - lastTick) / 1000; // secunde trecute
+    lastTick = now;
+    state.cookies += state.cps * dt;
+    // Nu mai facem Math.floor aici ca să nu pierdem fracții mici; 
+    // facem floor doar la comparații și afișare
+    updateUI();
+  } else {
+    lastTick = Date.now();
+  }
+}, 100);
+
+setInterval(() => {
+  // Salvăm valoarea întreagă ca să nu avem probleme la reload
+  if (state.username) {
+    state.cookies = Math.floor(state.cookies);
+    saveProgress();
+  }
+}, 5000);
+
+// ========== START ==========
+// Arată modalul la început dacă nu e logat
+window.onload = () => {
+  updateUI();
+  showAuth();
+};
+</script>
+</body>
+</html>
